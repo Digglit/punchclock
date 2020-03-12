@@ -1,0 +1,42 @@
+[
+  {
+    "name": "BigM Pizza",
+    "projectID": 0,
+    "clockedIn": false,
+    "paused": false,
+    "currentSeconds": 0,
+    "totalSeconds": 0,
+    "timeClockedIn": "",
+    "punchHistory": [
+      {
+        "currentSeconds": 0,
+        "timeClockedIn": 0,
+        "punchInDay": 0,
+        "punchOutDay": 0
+      },
+      {
+        "currentSeconds": 0,
+        "timeClockedIn": 0,
+        "punchInDay": 0,
+        "punchOutDay": 0
+      }
+    ]
+  },
+  {
+    "name": "Portfolio",
+    "projectID": 1,
+    "clockedIn": false,
+    "paused": false,
+    "currentSeconds": 0,
+    "totalSeconds": 0,
+    "timeClockedIn": "",
+    "punchHistory": [
+      {
+        "currentSeconds": 0,
+        "timeClockedIn": 0,
+        "punchInDay": 0,
+        "punchOutDay": 0
+      }
+    ]
+  }
+]
