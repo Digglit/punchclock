@@ -2,41 +2,45 @@
   {
     "name": "BigM Pizza",
     "projectID": 0,
-    "clockedIn": false,
     "paused": false,
     "currentSeconds": 0,
+    "timeAdjusted": 0,
     "totalSeconds": 0,
     "timeClockedIn": "",
-    "punchHistory": [
-      {
-        "currentSeconds": 0,
-        "timeClockedIn": 0,
-        "punchInDay": 0,
-        "punchOutDay": 0
-      },
-      {
-        "currentSeconds": 0,
-        "timeClockedIn": 0,
-        "punchInDay": 0,
-        "punchOutDay": 0
-      }
-    ]
+    "punchHistory": [],
+    "clockedIn": false
   },
   {
     "name": "Portfolio",
     "projectID": 1,
-    "clockedIn": false,
     "paused": false,
     "currentSeconds": 0,
+    "timeAdjusted": 0,
     "totalSeconds": 0,
     "timeClockedIn": "",
-    "punchHistory": [
-      {
-        "currentSeconds": 0,
-        "timeClockedIn": 0,
-        "punchInDay": 0,
-        "punchOutDay": 0
-      }
-    ]
+    "punchHistory": [],
+    "clockedIn": false
+  },
+  {
+    "name": "Punchclock",
+    "projectID": 1,
+    "paused": false,
+    "currentSeconds": 0,
+    "timeAdjusted": 0,
+    "totalSeconds": 0,
+    "timeClockedIn": "",
+    "punchHistory": [],
+    "clockedIn": false
+  },
+  {
+    "name": "Mulberry's",
+    "projectID": 1,
+    "paused": false,
+    "currentSeconds": 0,
+    "timeAdjusted": 0,
+    "totalSeconds": 0,
+    "timeClockedIn": "",
+    "punchHistory": [],
+    "clockedIn": false
   }
 ]

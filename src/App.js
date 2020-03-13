@@ -1,8 +1,11 @@
 import React, { Component } from 'react'
-import './App.css'
-import { ToastContainer, toast } from 'react-toastify'
+import './css/App.css'
+import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.min.css'
 import projects from './PunchHistory.json'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCog } from '@fortawesome/free-solid-svg-icons'
+import PieChart from 'react-minimal-pie-chart';
 
 class App extends Component {
   constructor(props) {
@@ -10,7 +13,9 @@ class App extends Component {
     this.state = {
       projects: projects,
       currentProjectSelectedIndex: 0,
-      currentProjectSelectedDetails: {},
+      clockedIn: false,
+      currentlyPaused: false,
+      timerRunning: false,
     }
   }
 
@@ -19,22 +24,53 @@ class App extends Component {
   }
 
   changeProjectHandler = (index) => {
-    let projects = this.state.projects
-    let projectDetails = projects[index]
-    this.setState({ currentProjectSelectedDetails: projectDetails, currentProjectSelectedIndex: index })
+    if (index !== this.state.currentProjectSelectedIndex) {
+      let projects = this.state.projects
+      if (projects[index].clockedIn) {
+        this.setState({ clockedIn: true })
+        if (!projects[index].paused) {
+          this.setState({ currentlyPaused: false })
+          this.getCurrentPunchSecondsHandler(index)
+          if (!this.state.timerRunning) {
+            this.startTimerHandler()
+          }
+        } else {
+          this.setState({ currentlyPaused: true })
+          this.pauseTimerHandler()
+        }
+      } else {
+        this.setState({ clockedIn: false, currentlyPaused: false })
+        this.pauseTimerHandler()
+      }
+      this.setState({ currentProjectSelectedIndex: index, projects: projects })
+    }
+  }
+
+  getCurrentPunchSecondsHandler = (index) => {
+    let latestPunch = this.state.projects[index].punchHistory.length - 1
+    let project = this.state.projects
+    let milliseconds = Date.now() - project[index].punchHistory[latestPunch].clockInTimeInMS
+    project[index].currentSeconds = Math.floor(milliseconds / 1000) + project[index].timeAdjusted
+    this.setState({ projects: project })
   }
 
   addProjectHandler = () => {
     let newProject = {
       name: 'New Project',
-      currentTime: 0,
+      projectID: this.state.projects.length,
+      paused: false,
+      currentSeconds: 0,
+      timeAdjusted: 0,
+      totalSeconds: 0,
+      timeClockedIn: "",
+      clockedIn: false,
       punchHistory: [],
     }
     this.createProjectHandler(newProject)
   }
 
   createProjectHandler = (newProject) => {
-    let currentProjects = [...this.state.projects]
+    let currentProjects = this.state.projects
     currentProjects.push(newProject)
     this.setState({ projects: currentProjects })
   }
@@ -48,8 +84,26 @@ class App extends Component {
       project[this.state.currentProjectSelectedIndex].clockedIn = true
       project[this.state.currentProjectSelectedIndex].paused = false
       project[this.state.currentProjectSelectedIndex].timeClockedIn = this.getTimeHandler()
-      this.setState({ projects: project })
+      this.addNewPunchHandler()
+      this.setState({ projects: project, clockedIn: true })
     }
+  }
+
+  clockOutHandler = () => {
+    this.pauseTimerHandler()
+    let project = this.state.projects
+    let index = this.state.currentProjectSelectedIndex
+    let latestPunch = project[index].punchHistory.length - 1
+    project[index].clockedIn = false
+    project[index].paused = false
+    project[index].totalSeconds += project[index].currentSeconds
+    project[index].punchHistory[latestPunch].totalSeconds = project[index].currentSeconds
+    project[index].currentSeconds = 0
+    project[index].punchHistory[latestPunch].punchOut = this.getTimeHandler()
+    project[index].punchHistory[latestPunch].clockedOut = true
+    project[index].punchHistory[latestPunch].timeAdjusted = project[index].timeAdjusted
+    project[index].timeAdjusted = 0
+    this.setState({ projects: project, clockedIn: false, currentlyPaused: false })
   }
 
   getTimeHandler = () => {
@@ -60,33 +114,25 @@ class App extends Component {
   }
 
   getDateHandler = () => {
-    var today = new Date();
-    var dd = String(today.getDate()).padStart(2, '0');
-    var mm = String(today.getMonth() + 1).padStart(2, '0');
-    var yyyy = today.getFullYear();
+    var today = new Date()
+    var dd = String(today.getDate()).padStart(2, '0')
+    var mm = String(today.getMonth() + 1).padStart(2, '0')
+    var yyyy = today.getFullYear()
 
-    today = mm + '/' + dd + '/' + yyyy;
+    today = mm + '/' + dd + '/' + yyyy
     return today
-  }
-
-  clockOutHandler = () => {
-    this.pauseTimerHandler()
-    this.addNewPunchHandler()
-    let project = this.state.projects
-    project[this.state.currentProjectSelectedIndex].clockedIn = false
-    project[this.state.currentProjectSelectedIndex].paused = false
-    project[this.state.currentProjectSelectedIndex].totalSeconds += project[this.state.currentProjectSelectedIndex].currentSeconds
-    project[this.state.currentProjectSelectedIndex].currentSeconds = 0
-    this.setState({ projects: project })
   }
 
   addNewPunchHandler = () => {
     let project = this.state.projects
     let newPunch = {
       date: this.getDateHandler(),
-      punchIn: project[this.state.currentProjectSelectedIndex].timeClockedIn,
-      punchOut: this.getTimeHandler(),
-      totalBillable: this.calculateTotalBillable()
+      punchIn: this.getTimeHandler(),
+      punchOut: 0,
+      totalSeconds: 0,
+      clockedOut: false,
+      clockInTimeInMS: Date.now(),
+      timeAdjusted: 0,
     }
     if (project[this.state.currentProjectSelectedIndex].punchHistory) {
       project[this.state.currentProjectSelectedIndex].punchHistory.push(newPunch)
@@ -110,26 +156,34 @@ class App extends Component {
       project[this.state.currentProjectSelectedIndex].currentSeconds += 1
       _this.setState({ projects: project })
     }, 1000)
+    this.setState({ timerRunning: true })
   }
 
   pauseTimerHandler = () => {
     clearInterval(this.incrementer)
+    this.setState({ timerRunning: false })
   }
 
-  pauseClockHandler = () => {
-    this.setState({ currentlyPaused: true })
-    this.pauseTimerHandler()
-  }
-
-  resumeClockHandler = () => {
+  pauseClockHandler = (index) => {
     if (this.state.clockedIn) {
-      this.setState({ currentlyPaused: false })
-      this.startTimerHandler()
+      let projects = this.state.projects
+      projects[index].paused = true
+      this.setState({ projects: projects, currentlyPaused: true })
+      this.pauseTimerHandler()
+    } else {
+      toast.error('What is it you\'re hoping to pause, exactly?')
     }
   }
 
+  resumeClockHandler = (index) => {
+    let projects = this.state.projects
+    projects[index].paused = false
+    this.setState({ projects: projects, currentlyPaused: false })
+    this.startTimerHandler()
+  }
+
   getSeconds = () => {
-    if (this.state.currentProjectSelectedIndex !== -1) {
+    if (this.state.projects[this.state.currentProjectSelectedIndex].punchHistory.length !== 0) {
       return ('0' + this.state.projects[this.state.currentProjectSelectedIndex].currentSeconds % 60).slice(-2)
     } else {
       return '00'
@@ -137,7 +191,7 @@ class App extends Component {
   }
 
   getMinutes = () => {
-    if (this.state.currentProjectSelectedIndex !== -1) {
+    if (this.state.projects[this.state.currentProjectSelectedIndex].punchHistory.length !== 0) {
       return ('0' + Math.floor(this.state.projects[this.state.currentProjectSelectedIndex].currentSeconds / 60) % 60).slice(-2)
     } else {
       return '00'
@@ -145,7 +199,7 @@ class App extends Component {
   }
 
   getHours = () => {
-    if (this.state.currentProjectSelectedIndex !== -1) {
+    if (this.state.projects[this.state.currentProjectSelectedIndex].punchHistory.length !== 0) {
       return ('0' + Math.floor(this.state.projects[this.state.currentProjectSelectedIndex].currentSeconds / 3600)).slice(-2)
     } else {
       return '00'
@@ -156,15 +210,65 @@ class App extends Component {
     return ('0' + Math.floor(value.totalSeconds / 3600)).slice(-2) + ':' + ('0' + Math.floor(value.totalSeconds / 60) % 60).slice(-2)
   }
 
+  formatTimeFromSecondsHandler = (seconds) => {
+    return ('0' + Math.floor(seconds / 3600)).slice(-2) + ':' + ('0' + Math.floor(seconds / 60) % 60).slice(-2) + ':' + ('0' + Math.floor(seconds) % 60).slice(-2)
+  }
+
+  clockInOutHandler = () => {
+    if (this.state.projects[this.state.currentProjectSelectedIndex].punchHistory.length !== 0) {
+      if (!this.state.projects[this.state.currentProjectSelectedIndex].punchHistory[this.state.projects[this.state.currentProjectSelectedIndex].punchHistory.length - 1].clockedOut) {
+        this.clockOutHandler()
+      } else {
+        this.clockInHandler()
+      }
+    } else {
+      this.clockInHandler()
+    }
+  }
+
+  changeProjectInfoHandler = (e, index, infoType) => {
+    let project = this.state.projects
+    if (infoType === 'name') {
+      project[index].name = e.target.value
+      this.setState({ projects: project })
+    } else if (infoType === 'removeProject') {
+      let newProjects = project.slice(0, index).concat(project.slice(index + 1, project.length))
+      this.changeProjectHandler(index)
+      this.setState({ projects: newProjects })
+    }
+  }
+
+  modifyTimerHandler = (time) => {
+    if (this.state.clockedIn) {
+      let project = this.state.projects
+      if (project[this.state.currentProjectSelectedIndex].currentSeconds + time < 0) {
+        project[this.state.currentProjectSelectedIndex].timeAdjusted -= project[this.state.currentProjectSelectedIndex].currentSeconds
+        project[this.state.currentProjectSelectedIndex].currentSeconds = 0
+      } else {
+        project[this.state.currentProjectSelectedIndex].currentSeconds += time
+        project[this.state.currentProjectSelectedIndex].timeAdjusted += time
+      }
+      this.setState({ projects: project })
+    } else {
+      toast.error('Maybe clock in?..')
+    }
+  }
+
   render() {
     return (
       <div className='applicationContainer'>
         <div className='projectsContainer'>
           {this.state.projects.map((value, index) => (
-            <div className={`projectPreviewContainer ${this.state.currentProjectSelectedIndex === index ? 'projectPreviewSelected' : ''}`} onMouseDown={() => this.changeProjectHandler(index)}>
-              <p className='interfaceText' style={{ justifySelf: 'start', marginLeft: '15px' }}>{value.name}</p>
-              <p className='interfaceText'>Current Hours: {this.getTotalProjectTime(value)}</p>
-            </div>
+            <Project
+              value={value}
+              index={index}
+              getTotalProjectTime={this.getTotalProjectTime}
+              projectSettingsButtonHandler={this.projectSettingsButtonHandler}
+              currentProjectSelectedIndex={this.state.currentProjectSelectedIndex}
+              changeProjectHandler={this.changeProjectHandler}
+              key={index}
+              changeProjectInfoHandler={this.changeProjectInfoHandler}
+            />
           ))}
           <div className='projectPreviewContainer' onMouseDown={this.addProjectHandler}>
             <p className='interfaceText' style={{ justifySelf: 'start', marginLeft: '15px' }}>+ Add Project</p>
@@ -175,27 +279,165 @@ class App extends Component {
             <div className='clockTimerContainer'>
               <p className='clockTimer'>{this.getHours()}:{this.getMinutes()}:{this.getSeconds()}</p>
             </div>
-            <button className='clockInOutButton' onMouseDown={this.state.projects[this.state.currentProjectSelectedIndex].clockedIn ? this.clockOutHandler : this.clockInHandler}>{this.state.projects[this.state.currentProjectSelectedIndex].clockedIn ? 'Clock Out' : 'Clock In'}</button>
-            <button className='pausePlayTimerButton' onMouseDown={this.state.currentlyPaused ? this.resumeClockHandler : this.pauseClockHandler}>{this.state.currentlyPaused ? 'Resume' : 'Pause'}</button>
+            <button className='clockInOutButton' onMouseDown={this.clockInOutHandler}>{this.state.clockedIn ? 'Clock Out' : 'Clock In'}</button>
+            <div className='modifyTimerContainer'>
+              <button className='modifyTimerButton' onMouseDown={() => this.modifyTimerHandler(1)}>+1</button>
+              <button className='modifyTimerButton' onMouseDown={() => this.modifyTimerHandler(10)}>+10</button>
+              <button className='modifyTimerButton' onMouseDown={() => this.modifyTimerHandler(60)}>+60</button>
+              <button className='modifyTimerButton' onMouseDown={() => this.modifyTimerHandler(-1)}>-1</button>
+              <button className='modifyTimerButton' onMouseDown={() => this.modifyTimerHandler(-10)}>-10</button>
+              <button className='modifyTimerButton' onMouseDown={() => this.modifyTimerHandler(-60)}>-60</button>
+            </div>
+            <button className='pausePlayTimerButton' onMouseDown={this.state.currentlyPaused ? () => this.resumeClockHandler(this.state.currentProjectSelectedIndex) : () => this.pauseClockHandler(this.state.currentProjectSelectedIndex)}>{this.state.currentlyPaused ? 'Resume' : 'Pause'}</button>
           </div>
         </div>
         <div className='projectDetailsContainer'>
           {this.state.currentProjectSelectedIndex !== -1 && this.state.projects[this.state.currentProjectSelectedIndex].punchHistory.length > 0 ? this.state.projects[this.state.currentProjectSelectedIndex].punchHistory.map((value, index) => (
-            <div className='projectPunchDetailsContainer'>
-              <p className='interfaceText'>Date: {value.date}</p>
-              <p className='interfaceText'>Punch in time: {value.punchIn}</p>
-              <p className='interfaceText'>Punch out time: {value.punchOut}</p>
-              <p className='interfaceText'>Total billable time: {value.totalBillable}</p>
-            </div>
+            <Punch
+              value={value}
+              index={index}
+              key={index}
+              formatTimeFromSecondsHandler={this.formatTimeFromSecondsHandler}
+              currentProjectDetails={this.state.projects[this.state.currentProjectSelectedIndex]}
+              formatTimeFromSecondsHandler={this.formatTimeFromSecondsHandler}
+            />
           )) :
             this.state.currentProjectSelectedIndex !== -1 && this.state.projects[this.state.currentProjectSelectedIndex].punchHistory ?
-              <p>No previous punches recorded. Clock in to create one</p>
+              <p style={{ marginLeft: '15px' }}>No previous punches recorded. Clock in to create one</p>
               :
               <p>Select a project!</p>
           }
         </div>
       </div>
     );
+  }
+}
+
+class Project extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      displaySettings: false,
+    }
+  }
+
+  projectSettingsButtonHandler = (project, e) => {
+    e.stopPropagation()
+    this.setState({ displaySettings: !this.state.displaySettings })
+  }
+
+  SettingsBanner = (props) => {
+    if (props.displaySettings) {
+      return (
+        <div className='projectSettingsContainer'>
+          <p style={{ marginLeft: '15px' }}>Project Name: </p>
+          <input type='text' value={props.value.name} onChange={(e) => { props.changeProjectInfoHandler(e, props.value.projectID, 'name') }} className='projectInput'></input>
+          <button style={{ marginLeft: '15px' }} className='removeProjectButton' onMouseDown={(e) => props.changeProjectInfoHandler(e, props.value.projectID, 'removeProject')}>Remove Project</button>
+        </div>
+      )
+    } else {
+      return (
+        <div className='projectSettingsContainer closedProjectSettings'>
+
+        </div>
+      )
+    }
+  }
+
+  render() {
+    return (
+      <div className={`projectPreviewContainer ${this.props.currentProjectSelectedIndex === this.props.index ? 'projectPreviewSelected' : ''}`} onMouseDown={() => this.props.changeProjectHandler(this.props.index)}>
+        <button className='projectSettingsButton' style={this.props.value.clockedIn ? { color: 'white' } : {}} onMouseDown={(e) => this.projectSettingsButtonHandler(this.props.value, e)}><FontAwesomeIcon icon={faCog} /></button>
+        <p className='interfaceText' style={{ justifySelf: 'start', marginLeft: '15px' }}>{this.props.value.name}</p>
+        <p className='interfaceText'>Current Hours: {this.props.getTotalProjectTime(this.props.value)}</p>
+        <this.SettingsBanner displaySettings={this.state.displaySettings} value={this.props.value} changeProjectInfoHandler={this.props.changeProjectInfoHandler} />
+      </div>
+    )
+  }
+}
+
+class Punch extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      showDetails: false,
+    }
+  }
+
+  displayDetailsHandler = () => {
+    this.setState({ showDetails: !this.state.showDetails })
+  }
+
+  PunchDetailsContainer = (props) => {
+    if (props.showDetails) {
+      return (
+        <div className='punchDetailsContainer'>
+          <p className='interfaceText'>Clocked In Status: {!props.value.clockedOut ? 'true' : 'false'}</p>
+          <PieChart
+            animate={true}
+            animationDuration={500}
+            animationEasing="ease-out"
+            cx={50}
+            cy={50}
+            data={[
+              {
+                color: '#0F3B2A',
+                title: 'Total Time Unadjusted',
+                value: props.value.clockedOut ? props.value.totalSeconds - props.value.timeAdjusted : props.projectDetails.currentSeconds - props.projectDetails.timeAdjusted
+              },
+              {
+                color: '#2FBA85',
+                title: 'Time Adjusted',
+                value: props.value.clockedOut ? props.value.timeAdjusted : props.projectDetails.timeAdjusted
+              },
+              {
+                color: '#1B6E4E',
+                title: 'Total Seconds',
+                value: props.value.clockedOut ? props.value.totalSeconds : props.projectDetails.currentSeconds
+              }
+            ]}
+            label={false}
+            labelPosition={50}
+            lengthAngle={360}
+            lineWidth={100}
+            onClick={undefined}
+            onMouseOut={undefined}
+            onMouseOver={undefined}
+            paddingAngle={0}
+            radius={50}
+            rounded={false}
+            startAngle={0}
+            style={{
+              height: '100px'
+            }}
+          />
+          <p className='interfaceText'>Total adjusted time: {props.formatTimeFromSecondsHandler(props.value.timeAdjusted)}</p>
+          <p className='interfaceText'>Total time unadjusted: {props.formatTimeFromSecondsHandler(props.value.totalSeconds - props.value.timeAdjusted)}</p>
+        </div>
+      )
+    } else {
+      return (
+        <div className='punchDetailsContainer closedProjectSettings' >
+
+        </div>
+      )
+    }
+
+  }
+
+  render() {
+    return (
+      <div className='projectPunchDetailsContainer'>
+        <p className='interfaceText'>Date: {this.props.value.date}</p>
+        <p className='interfaceText'>Punch in time: {this.props.value.punchIn}</p>
+        <p className='interfaceText'>Punch out time: {this.props.value.punchOut}</p>
+        <p className='interfaceText'>Total billable time: {this.props.formatTimeFromSecondsHandler(this.props.value.totalSeconds)}</p>
+        <span className={`openPunchDetailsLine1 ${this.state.showDetails ? 'punchDetailsLineRotated' : ''}`} />
+        <span className={`openPunchDetailsLine2 ${this.state.showDetails ? 'punchDetailsLineRotated' : ''}`} />
+        <span className='openPunchDetailsContainer' onMouseDown={() => this.displayDetailsHandler()} />
+        <this.PunchDetailsContainer showDetails={this.state.showDetails} projectDetails={this.props.currentProjectDetails} value={this.props.value} index={this.props.index} formatTimeFromSecondsHandler={this.props.formatTimeFromSecondsHandler} />
+      </div>
+    )
   }
 }
 
