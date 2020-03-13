@@ -233,7 +233,11 @@ class App extends Component {
       this.setState({ projects: project })
     } else if (infoType === 'removeProject') {
       let newProjects = project.slice(0, index).concat(project.slice(index + 1, project.length))
-      this.changeProjectHandler(index)
+      if (index === project.length) {
+        this.changeProjectHandler(index - 1)
+      } else {
+        this.changeProjectHandler(index + 1)
+      }
       this.setState({ projects: newProjects })
     }
   }
@@ -369,6 +373,7 @@ class Punch extends Component {
   }
 
   PunchDetailsContainer = (props) => {
+    let adjustedSeconds = props.value.clockedOut ? props.value.timeAdjusted : props.projectDetails.timeAdjusted
     if (props.showDetails) {
       return (
         <div className='punchDetailsContainer'>
@@ -387,8 +392,8 @@ class Punch extends Component {
               },
               {
                 color: '#2FBA85',
-                title: 'Time Adjusted',
-                value: props.value.clockedOut ? props.value.timeAdjusted : props.projectDetails.timeAdjusted
+                title: 'Total Time Adjusted',
+                value: adjustedSeconds
               },
               {
                 color: '#1B6E4E',
@@ -411,8 +416,8 @@ class Punch extends Component {
               height: '100px'
             }}
           />
-          <p className='interfaceText'>Total adjusted time: {props.formatTimeFromSecondsHandler(props.value.timeAdjusted)}</p>
-          <p className='interfaceText'>Total time unadjusted: {props.formatTimeFromSecondsHandler(props.value.totalSeconds - props.value.timeAdjusted)}</p>
+          <p className='interfaceText'>Total time adjusted: {adjustedSeconds < 0 ? '-' : ''}{props.formatTimeFromSecondsHandler(adjustedSeconds < 0 ? Math.abs(adjustedSeconds) : adjustedSeconds)}</p>
+          <p className='interfaceText'>Total time unadjusted: {props.formatTimeFromSecondsHandler(props.value.clockedOut ? props.value.totalSeconds - props.value.timeAdjusted : props.projectDetails.currentSeconds - props.projectDetails.timeAdjusted)}</p>
         </div>
       )
     } else {
@@ -431,7 +436,7 @@ class Punch extends Component {
         <p className='interfaceText'>Date: {this.props.value.date}</p>
         <p className='interfaceText'>Punch in time: {this.props.value.punchIn}</p>
         <p className='interfaceText'>Punch out time: {this.props.value.punchOut}</p>
-        <p className='interfaceText'>Total billable time: {this.props.formatTimeFromSecondsHandler(this.props.value.totalSeconds)}</p>
+        <p className='interfaceText'>Total billable time: {this.props.formatTimeFromSecondsHandler(this.props.value.clockedOut ? this.props.value.totalSeconds : this.props.currentProjectDetails.currentSeconds)}</p>
         <span className={`openPunchDetailsLine1 ${this.state.showDetails ? 'punchDetailsLineRotated' : ''}`} />
         <span className={`openPunchDetailsLine2 ${this.state.showDetails ? 'punchDetailsLineRotated' : ''}`} />
         <span className='openPunchDetailsContainer' onMouseDown={() => this.displayDetailsHandler()} />
