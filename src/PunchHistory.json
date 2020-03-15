@@ -6,6 +6,7 @@
     "currentSeconds": 0,
     "timeAdjusted": 0,
     "totalSeconds": 0,
+    "hourlyRate": 0,
     "timeClockedIn": "",
     "punchHistory": [],
     "clockedIn": false
@@ -17,28 +18,31 @@
     "currentSeconds": 0,
     "timeAdjusted": 0,
     "totalSeconds": 0,
+    "hourlyRate": 0,
     "timeClockedIn": "",
     "punchHistory": [],
     "clockedIn": false
   },
   {
     "name": "Punchclock",
-    "projectID": 1,
+    "projectID": 2,
     "paused": false,
     "currentSeconds": 0,
     "timeAdjusted": 0,
     "totalSeconds": 0,
+    "hourlyRate": 0,
     "timeClockedIn": "",
     "punchHistory": [],
     "clockedIn": false
   },
   {
     "name": "Mulberry's",
-    "projectID": 1,
+    "projectID": 3,
     "paused": false,
     "currentSeconds": 0,
     "timeAdjusted": 0,
     "totalSeconds": 0,
+    "hourlyRate": 0,
     "timeClockedIn": "",
     "punchHistory": [],
     "clockedIn": false

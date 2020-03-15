@@ -62,6 +62,7 @@ class App extends Component {
       currentSeconds: 0,
       timeAdjusted: 0,
       totalSeconds: 0,
+      hourlyRate: 0,
       timeClockedIn: "",
       clockedIn: false,
       punchHistory: [],
@@ -102,6 +103,7 @@ class App extends Component {
     project[index].punchHistory[latestPunch].punchOut = this.getTimeHandler()
     project[index].punchHistory[latestPunch].clockedOut = true
     project[index].punchHistory[latestPunch].timeAdjusted = project[index].timeAdjusted
+    project[index].punchHistory[latestPunch].hourlyRate = project[index].hourlyRate
     project[index].timeAdjusted = 0
     this.setState({ projects: project, clockedIn: false, currentlyPaused: false })
   }
@@ -133,6 +135,7 @@ class App extends Component {
       clockedOut: false,
       clockInTimeInMS: Date.now(),
       timeAdjusted: 0,
+      hourlyRate: 0,
     }
     if (project[this.state.currentProjectSelectedIndex].punchHistory) {
       project[this.state.currentProjectSelectedIndex].punchHistory.push(newPunch)
@@ -258,6 +261,12 @@ class App extends Component {
     }
   }
 
+  modifyHourlyRateHandler = (e, index) => {
+    let project = this.state.projects
+    project[index].hourlyRate = e.target.value
+    this.setState({ projects: project })
+  }
+
   render() {
     return (
       <div className='applicationContainer'>
@@ -272,6 +281,7 @@ class App extends Component {
               changeProjectHandler={this.changeProjectHandler}
               key={index}
               changeProjectInfoHandler={this.changeProjectInfoHandler}
+              modifyHourlyRateHandler={this.modifyHourlyRateHandler}
             />
           ))}
           <div className='projectPreviewContainer' onMouseDown={this.addProjectHandler}>
@@ -336,6 +346,8 @@ class Project extends Component {
         <div className='projectSettingsContainer'>
           <p style={{ marginLeft: '15px' }}>Project Name: </p>
           <input type='text' value={props.value.name} onChange={(e) => { props.changeProjectInfoHandler(e, props.value.projectID, 'name') }} className='projectInput'></input>
+          <p style={{ marginLeft: '15px' }}>Hourly Rate: </p>
+          <input type='text' value={props.value.hourlyRate} onChange={(e) => { props.modifyHourlyRateHandler(e, props.value.projectID) }} className='projectInput'></input>
           <button style={{ marginLeft: '15px' }} className='removeProjectButton' onMouseDown={(e) => props.changeProjectInfoHandler(e, props.value.projectID, 'removeProject')}>Remove Project</button>
         </div>
       )
@@ -354,7 +366,7 @@ class Project extends Component {
         <button className='projectSettingsButton' style={this.props.value.clockedIn ? { color: 'white' } : {}} onMouseDown={(e) => this.projectSettingsButtonHandler(this.props.value, e)}><FontAwesomeIcon icon={faCog} /></button>
         <p className='interfaceText' style={{ justifySelf: 'start', marginLeft: '15px' }}>{this.props.value.name}</p>
         <p className='interfaceText'>Current Hours: {this.props.getTotalProjectTime(this.props.value)}</p>
-        <this.SettingsBanner displaySettings={this.state.displaySettings} value={this.props.value} changeProjectInfoHandler={this.props.changeProjectInfoHandler} />
+        <this.SettingsBanner displaySettings={this.state.displaySettings} value={this.props.value} changeProjectInfoHandler={this.props.changeProjectInfoHandler} modifyHourlyRateHandler={this.props.modifyHourlyRateHandler} />
       </div>
     )
   }
@@ -377,7 +389,7 @@ class Punch extends Component {
     if (props.showDetails) {
       return (
         <div className='punchDetailsContainer'>
-          <p className='interfaceText'>Clocked In Status: {!props.value.clockedOut ? 'true' : 'false'}</p>
+          <p className='interfaceText'>Total Earned: ${(props.value.clockedOut ? (props.value.hourlyRate / 3600) * props.value.totalSeconds : (props.projectDetails.hourlyRate / 3600) * props.projectDetails.currentSeconds).toFixed(2)}</p>
           <PieChart
             animate={true}
             animationDuration={500}
